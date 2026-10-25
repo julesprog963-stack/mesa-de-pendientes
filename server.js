@@ -676,14 +676,41 @@ app.use((error, _req, res, _next) => {
   res.status(error.status || 500).json({ error: error.status && error.status < 500 ? error.message : 'Ocurrió un error en el servidor.' });
 });
 
+async function syncLocalSeedToSupabase() {
+  if (!USE_SUPABASE) return;
+  await readJson(ENTITIES_FILE, []);
+  await readJson(FORM_CONFIG_FILE, MESA_FORM_DEFAULTS);
+  const tickets = await readJson(TICKETS_FILE, []);
+  if (!Array.isArray(tickets)) return;
+  for (const ticket of tickets) {
+    for (const attachment of ticket.attachments || []) {
+      if (!attachment?.id || !/^[0-9a-f-]{36}$/i.test(attachment.id)) continue;
+      const localPath = path.join(UPLOADS_DIR, attachment.id);
+      try {
+        const buffer = await fs.readFile(localPath);
+        const url = `${SUPABASE_URL}/storage/v1/object/${encodeURIComponent(SUPABASE_BUCKET)}/${encodeURIComponent(attachment.id)}`;
+        await fetch(url, {
+          method: 'POST',
+          headers: supabaseHeaders({
+            'Content-Type': attachment.type || 'application/octet-stream',
+            'x-upsert': 'true'
+          }),
+          body: buffer
+        });
+      } catch {}
+    }
+  }
+}
+
 async function startServer() {
   const stored = await readJson(ADMIN_KEY_FILE, null);
   adminKey = process.env.ADMIN_KEY || stored?.key || crypto.randomBytes(24).toString('hex');
   if (!process.env.ADMIN_KEY && !stored?.key) await writeJson(ADMIN_KEY_FILE, { key: adminKey });
+  await syncLocalSeedToSupabase();
   app.listen(PORT, HOST, () => {
   console.log(`Mesa de pendientes disponible en http://${HOST}:${PORT}`);
   console.log(`Formulario público local: http://${HOST}:${PORT}/solicitar.html`);
-  console.log(`Datos persistentes: ${DATA_DIR}`);
+  console.log(`Datos persistentes: ${USE_SUPABASE ? `Supabase (${SUPABASE_URL})` : DATA_DIR}`);
   console.log(`Acceso privado de administración: http://127.0.0.1:${PORT}/?access=${encodeURIComponent(adminKey)}`);
   });
 }
