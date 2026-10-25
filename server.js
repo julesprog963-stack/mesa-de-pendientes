@@ -119,6 +119,7 @@ function queueWrite(operation) {
 
 async function writeJson(file, data) {
   if (!USE_SUPABASE) return writeLocalJson(file, data);
+  await writeLocalJson(file, data).catch(() => {});
   const key = kvKeyForFile(file);
   const url = `${SUPABASE_URL}/rest/v1/mesa_kv?on_conflict=key`;
   const response = await fetch(url, {
