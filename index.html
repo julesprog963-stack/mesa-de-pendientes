@@ -23,10 +23,11 @@
           <button class="topnav-link" type="button" data-view="receiving" aria-pressed="false">Recepción</button>
           <button class="topnav-link" type="button" data-view="active" aria-pressed="false">En curso <span class="nav-count" id="activeCount">0</span></button>
           <button class="topnav-link" type="button" data-view="history" aria-pressed="false">Historial</button>
+          <button class="topnav-link" type="button" data-view="entities" aria-pressed="false">Entidades</button>
         </nav>
 
         <div class="topbar-actions">
-          <a class="public-form-link" href="solicitar.html" target="_blank" rel="noreferrer">Formulario público</a>
+          <a class="public-form-link" href="solicitar.html" target="_blank" rel="noreferrer">Formulario general</a>
           <span class="local-status"><span class="status-dot"></span> <span id="syncStatus">Guardado local</span></span>
           <button class="avatar-button" id="profileButton" type="button" aria-label="Abrir perfil">JP</button>
         </div>
@@ -61,6 +62,10 @@
               <span class="stop-hole"></span>
               <span><strong>Bloqueados</strong><small id="blockedCount">2 tickets</small></span>
             </button>
+            <button class="rail-stop" data-filter="done" type="button" aria-pressed="false">
+              <span class="stop-hole"></span>
+              <span><strong>Cerrados</strong><small id="doneCount">0 tickets</small></span>
+            </button>
           </div>
           <div class="rail-footer">
             <span class="micro-label">ESPACIO</span>
@@ -69,6 +74,7 @@
         </aside>
 
         <main class="main-content" id="appMain">
+          <div class="workspace-entity-filter"><label for="workspaceEntityFilter">Ver tickets de</label><select id="workspaceEntityFilter"><option value="all">Todas las entidades</option><option value="none">Sin entidad</option></select></div>
           <section class="app-view home-view" id="homeView">
             <div class="home-hero">
               <div class="home-hero-copy">
@@ -77,7 +83,24 @@
                 <p>Tu mesa para capturar solicitudes, ordenar pendientes y dejar claro qué sigue.</p>
               </div>
               <div class="home-hero-action">
-                <span class="home-date" id="homeDate">27 SEP 2026</span>
+                <div class="home-clock" aria-label="Fecha y hora locales">
+                  <time class="home-date" id="homeDate"></time>
+                  <div class="home-clock-reading">
+                    <svg class="home-analog-clock" viewBox="0 0 100 100" aria-hidden="true">
+                      <circle class="clock-face" cx="50" cy="50" r="47" />
+                      <path class="clock-hour-marks" d="M50 9v7M91 50h-7M50 91v-7M9 50h7" />
+                      <path class="clock-minute-marks" d="m70.5 14.5-2.5 4.3m17.5 10.7-4.3 2.5m4.3 38.5-4.3-2.5M70.5 85.5 68 81.2m-38.5 4.3 2.5-4.3M14.5 70.5l4.3-2.5m-4.3-38.5 4.3 2.5m10.7-17.5 2.5 4.3" />
+                      <line class="clock-hour-hand" id="analogHourHand" x1="50" y1="50" x2="50" y2="29" />
+                      <line class="clock-minute-hand" id="analogMinuteHand" x1="50" y1="50" x2="50" y2="19" />
+                      <line class="clock-second-hand" id="analogSecondHand" x1="50" y1="57" x2="50" y2="13" />
+                      <circle class="clock-pivot" cx="50" cy="50" r="2.5" />
+                    </svg>
+                    <div class="home-clock-digital">
+                      <time class="home-time" id="homeTime"></time>
+                      <span class="home-clock-label">Hora local</span>
+                    </div>
+                  </div>
+                </div>
                 <button class="button button-primary" id="homeNewTicketButton" type="button">
                   <svg class="icon-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
                   Recibir un ticket
@@ -129,7 +152,8 @@
                   <div class="home-panel-heading compact"><div><span class="home-section-label">ORDEN PERSONAL</span><h2>Mis categorías</h2></div><button class="icon-button" id="homeProfileButton" type="button" aria-label="Editar perfil">↗</button></div>
                   <div class="home-category-list" id="homeCategoryList"></div>
                   <button class="button button-quiet home-settings-button" id="homeSettingsButton" type="button">Personalizar mesa</button>
-                  <button class="button button-quiet home-settings-button" id="formConfigButton" type="button">Configurar formulario público</button>
+                  <button class="button button-quiet home-settings-button" id="formConfigButton" type="button">Configurar formulario de entidad</button>
+                  <button class="button button-quiet home-settings-button" type="button" data-view="entities">Entidades y enlaces</button>
                 </div>
               </aside>
             </div>
@@ -151,7 +175,7 @@
             <div class="queue-panel" id="cola">
               <div class="panel-heading">
                 <div>
-                  <h2>Pendientes recibidos <span class="heading-count" id="visibleCount">12</span></h2>
+                  <h2>Pendientes recibidos <span class="heading-count" id="visibleCount">0</span></h2>
                 </div>
                 <button class="icon-button" id="refreshButton" type="button" aria-label="Actualizar lista" title="Actualizar lista">
                   <svg class="icon-svg icon-refresh" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0 1 5" /><path d="M20 5v6h-6" /></svg>
@@ -169,13 +193,12 @@
                   <button class="filter-chip" type="button" data-filter="high" aria-pressed="false">Alta prioridad</button>
                 </div>
               </div>
-              <div class="film-rule" aria-hidden="true"><span></span><i></i><i></i><i></i><i></i><i></i><i></i><i></i><span></span></div>
               <div class="ticket-list" id="ticketList" aria-live="polite"></div>
               <p class="scroll-hint" id="scrollHint">Desliza para ver más pendientes</p>
               <div class="empty-state is-hidden" id="emptyState">
-                <span class="empty-mark" aria-hidden="true"></span>
-                <strong>No hay tickets con ese filtro</strong>
-                <p>Prueba otra búsqueda o recibe una solicitud nueva.</p>
+                <strong id="queueEmptyTitle">Aún no hay pendientes</strong>
+                <p id="queueEmptyCopy">Crea un ticket o comparte el formulario para recibir solicitudes.</p>
+                <button class="button queue-empty-action" id="queueEmptyAction" type="button">Crear un ticket</button>
               </div>
             </div>
 
@@ -191,8 +214,12 @@
               </div>
 
               <div class="status-strip">
-                <div class="status-strip-copy"><span class="strip-pip"></span><strong id="statusLabel">En revisión</strong><span id="statusHelp">Falta confirmar un criterio</span></div>
-                <button class="text-button" id="advanceStatusButton" type="button"><span id="advanceStatusText">Marcar listo para avanzar</span> <svg class="icon-svg inline-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h13m-5-6 6 6-6 6" /></svg></button>
+                <div class="status-strip-copy"><span class="strip-pip" id="statusPip"></span><strong id="statusLabel">En revisión</strong><span id="statusHelp">Falta confirmar un criterio</span></div>
+                <div class="status-strip-actions" id="statusStripActions">
+                  <button class="text-button status-action-quiet" id="blockStatusButton" type="button">Bloquear</button>
+                  <button class="text-button" id="advanceStatusButton" type="button"><span id="advanceStatusText">Marcar listo para avanzar</span> <svg class="icon-svg inline-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h13m-5-6 6 6-6 6" /></svg></button>
+                  <button class="button status-close-button" id="closeStatusButton" type="button"><svg class="icon-svg inline-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l4 4L19 6" /></svg> <span id="closeStatusText">Cerrar ticket</span></button>
+                </div>
               </div>
 
               <form class="ticket-form" id="ticketForm" novalidate>
@@ -205,6 +232,7 @@
                     <span>¿Qué necesita el usuario? <em>*</em></span>
                     <textarea id="descriptionInput" name="description" rows="4" placeholder="Describe el comportamiento actual y el resultado esperado…" required></textarea>
                   </label>
+                  <label class="field field-span-2"><span>Entidad</span><select id="entityInput" name="entityId"><option value="">Sin entidad</option></select></label>
                 </div>
 
                 <div class="form-divider"><span>Contexto de trabajo</span><button class="structure-button" id="structureButton" type="button"><svg class="icon-svg spark-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.7 6.3L20 11l-6.3 1.7L12 19l-1.7-6.3L4 11l6.3-1.7L12 3z" /></svg> Estructurar solicitud</button></div>
@@ -260,12 +288,33 @@
                   <small class="field-hint">Una condición por línea. Quien lo atienda usará esto como base para validar el resultado.</small>
                 </label>
 
+                <section class="ticket-attachments" id="ticketAttachmentsPanel" aria-labelledby="ticketAttachmentsTitle">
+                  <div class="ticket-attachments-heading">
+                    <div>
+                      <h3 id="ticketAttachmentsTitle">Evidencias y entregables</h3>
+                      <p class="ticket-attachments-copy">Adjunta un PDF, captura o documento para respaldar el ticket o entregar la solución en el portal de la entidad.</p>
+                    </div>
+                    <span class="public-attachment-count" id="ticketAttachmentCount">0 / 8</span>
+                  </div>
+                  <div class="public-upload-area" id="deskUploadArea">
+                    <input class="public-attachment-input" id="deskAttachmentInput" type="file" multiple aria-describedby="deskAttachmentHint deskAttachmentMessage" />
+                    <label class="public-upload-trigger" for="deskAttachmentInput">
+                      <svg class="public-upload-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m0 0L7.5 8.5M12 4l4.5 4.5M5 14v5h14v-5" /></svg>
+                      <span><strong>Selecciona un PDF o archivo</strong><small>o arrástralo aquí</small></span>
+                    </label>
+                  </div>
+                  <p class="public-attachment-hint" id="deskAttachmentHint">Hasta 8 archivos (10 MB por archivo). Los archivos quedan visibles y descargables en el portal de la entidad.</p>
+                  <p class="public-attachment-message" id="deskAttachmentMessage" role="status"></p>
+                  <div class="ticket-attachment-groups" id="ticketAttachmentList" aria-live="polite"></div>
+                </section>
+
                 <div class="form-footer">
                   <div class="readiness" aria-live="polite">
                     <span class="readiness-ring"><span id="readinessValue">0%</span></span>
                     <span><strong id="readinessTitle">Ficha incompleta</strong><small id="readinessCopy">Completa los campos marcados para enviarla.</small></span>
                   </div>
                   <div class="form-actions">
+                    <button class="button button-danger-quiet is-hidden" id="deleteTicketButton" type="button">Eliminar ticket</button>
                     <button class="button button-quiet" id="discardButton" type="button">Descartar cambios</button>
                     <button class="button button-primary" id="saveTicketButton" type="submit"><svg class="icon-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l4 4L19 6" /></svg> Guardar ticket</button>
                   </div>
@@ -276,6 +325,19 @@
           </section>
           </div>
 
+          <section class="app-view secondary-view is-hidden" id="entitiesView" aria-labelledby="entitiesTitle">
+            <div class="secondary-heading"><div><h1 id="entitiesTitle">Entidades</h1><p>Registra a cada cliente o equipo y comparte su enlace privado para solicitudes y seguimiento.</p></div><button class="button button-quiet" id="lockAccessButton" type="button">Cerrar acceso</button></div>
+            <section class="entities-panel">
+              <form id="entityForm" class="entity-create-form">
+                <label class="field"><span>Nombre de la entidad</span><input id="entityNameInput" name="name" maxlength="100" placeholder="Ej. Refaccionaria Arsenio" required /></label>
+                <button class="button button-primary" type="submit" id="createEntityButton">Registrar entidad</button>
+              </form>
+              <p id="entityFormMessage" class="entity-form-message" role="status"></p>
+              <p class="entity-link-note">Cada enlace permite consultar los tickets de esa entidad. Compártelo con sus integrantes. Para abrirlo desde otro equipo, la mesa debe estar alojada en una dirección accesible para ellos.</p>
+              <div id="entityList" class="entity-list"></div>
+            </section>
+          </section>
+
           <section class="app-view secondary-view is-hidden" id="activeView" aria-labelledby="activeViewTitle">
             <div class="secondary-heading">
               <div><span class="home-eyebrow">TRABAJO EN MOVIMIENTO</span><h1 id="activeViewTitle">En curso</h1><p>Lo que requiere una decisión, revisión o siguiente paso.</p></div>
@@ -283,7 +345,7 @@
             </div>
             <div class="secondary-layout">
               <section class="secondary-list-panel"><div class="secondary-panel-heading"><div><span class="home-section-label">COLA ACTIVA</span><h2><span id="activeViewTotal">0</span> tickets en movimiento</h2></div><span class="home-panel-mark">02—</span></div><div class="secondary-ticket-list" id="activeTicketList"></div><div class="secondary-empty is-hidden" id="activeEmpty"><strong>Tu mesa está despejada.</strong><span>No hay tickets en curso todavía.</span><button class="text-button" type="button" data-view="receiving">Recibir el primero →</button></div></section>
-              <aside class="secondary-note"><span class="home-section-label">LECTURA RÁPIDA</span><h2>Primero lo que necesita atención.</h2><p>Marca un ticket como listo para avanzar desde su ficha de recepción.</p><div class="note-rule"></div><span class="note-foot">Estado · revisión / listo</span></aside>
+              <aside class="secondary-note"><span class="home-section-label">LECTURA RÁPIDA</span><h2>Primero lo que necesita atención.</h2><p>Avanza o cierra un ticket desde su ficha de recepción o directamente desde esta lista.</p><div class="note-rule"></div><span class="note-foot">Estado · revisión / listo / cerrado</span></aside>
             </div>
           </section>
 
@@ -299,6 +361,17 @@
     </div>
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
+    <div class="auth-gate admin-access-gate" id="adminAccessGate" aria-hidden="false">
+      <section class="auth-card" role="dialog" aria-modal="true" aria-labelledby="adminAccessTitle">
+        <h2 id="adminAccessTitle">Accede a tu mesa</h2>
+        <p class="auth-copy">Usa tu clave privada de administración. Está guardada en este equipo y el servidor muestra tu enlace de acceso al iniciarse.</p>
+        <form id="adminLoginForm" class="profile-form">
+          <label class="field"><span>Clave de administración</span><input id="adminKeyInput" type="password" autocomplete="current-password" required /></label>
+          <p id="adminAccessError" class="admin-access-error" role="alert"></p>
+          <button class="button button-primary" type="submit">Entrar a mi mesa</button>
+        </form>
+      </section>
+    </div>
     <div class="auth-gate" id="authGate" aria-hidden="true">
       <section class="auth-card" role="dialog" aria-modal="true" aria-labelledby="authTitle">
         <div class="auth-mark" aria-hidden="true">J</div>
@@ -387,13 +460,14 @@
       <section class="profile-dialog form-config-dialog" role="dialog" aria-modal="true" aria-labelledby="formConfigTitle">
         <div class="dialog-header">
           <div>
-            <p class="auth-kicker">FORMULARIO PÚBLICO</p>
-            <h2 id="formConfigTitle">Configura las opciones</h2>
-            <p class="dialog-copy">Define las áreas que verá tu jefa y los detalles que aparecen según cada área.</p>
+            <h2 id="formConfigTitle">Configurar formulario</h2>
+            <p class="dialog-copy">Elige una entidad y personaliza sus áreas, tipos, prioridades y apariencia. Guarda y continúa con la siguiente.</p>
           </div>
           <button class="icon-button dialog-close" id="closeFormConfigButton" type="button" aria-label="Cerrar configuración">×</button>
         </div>
         <form class="form-config-form" id="formConfigForm">
+          <label class="field"><span>Formulario de</span><select id="formConfigEntityInput"></select></label>
+          <p id="formConfigSaved" role="status" aria-live="polite"></p>
           <div class="form-config-section-heading"><div><span class="field-label">ÁREAS Y DETALLES</span><small>Configura categorías y detalles para cualquier tipo de trabajo.</small></div><span class="category-count" id="formAreaCount">0</span></div>
           <div class="form-config-area-list" id="formAreaList"></div>
           <div class="form-config-add-row"><input id="newFormAreaInput" type="text" maxlength="40" placeholder="Nueva área, por ejemplo Recursos humanos" /><button class="button button-quiet" id="addFormAreaButton" type="button">Añadir área</button></div>
@@ -415,6 +489,7 @@
     </div>
 
     <script src="form-config.js"></script>
+    <script src="work-hours.js"></script>
     <script src="app.js"></script>
   </body>
 </html>

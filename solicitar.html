@@ -17,7 +17,12 @@
         <span class="public-header-note" id="publicHeaderNote">TU MESA · RECEPCIÓN</span>
       </header>
 
-      <section class="public-layout">
+      <nav class="portal-navigation is-hidden" id="portalNavigation" aria-label="Portal de la entidad">
+        <button class="portal-tab is-active" type="button" data-portal-tab="request" aria-pressed="true">Nueva solicitud</button>
+        <button class="portal-tab" type="button" data-portal-tab="tickets" aria-pressed="false">Mis tickets <span id="portalTicketCount">0</span></button>
+      </nav>
+      <section class="portal-hours is-hidden" id="portalHoursSection" aria-labelledby="portalHoursTitle"><h2 id="portalHoursTitle">Horas trabajadas</h2><div id="portalHoursSummary"></div></section>
+      <section class="public-layout" id="publicRequestSection">
         <div class="public-intro">
           <p class="public-kicker">ENVIAR SOLICITUD</p>
           <h1>Cuéntanos qué necesitas.</h1>
@@ -42,15 +47,41 @@
               <label class="public-field"><span>Tu nombre <em>*</em></span><input name="requester" type="text" placeholder="Nombre y apellido" required /></label>
               <label class="public-field"><span>Correo para seguimiento</span><input name="requester_email" type="email" placeholder="tu@correo.com" /></label>
             </div>
+            <section class="public-attachments public-field-span-2" aria-labelledby="publicAttachmentsTitle">
+              <div class="public-attachments-heading">
+                <div><h3 id="publicAttachmentsTitle">Adjunta evidencias</h3><p>Capturas, documentos u otros archivos que ayuden a entender la solicitud.</p></div>
+                <span class="public-attachment-count" id="publicAttachmentCount">0 / 8</span>
+              </div>
+              <div class="public-upload-area" id="publicUploadArea">
+                <input class="public-attachment-input" id="publicAttachmentInput" type="file" multiple aria-describedby="publicAttachmentHint publicAttachmentMessage" />
+                <label class="public-upload-trigger" for="publicAttachmentInput">
+                  <svg class="public-upload-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m0 0L7.5 8.5M12 4l4.5 4.5M5 14v5h14v-5" /></svg>
+                  <span><strong>Selecciona los archivos</strong><small>o arrástralos aquí</small></span>
+                </label>
+              </div>
+              <p class="public-attachment-hint" id="publicAttachmentHint">Hasta 8 archivos, 10 MB por archivo. Imágenes, PDF, documentos y más. No se admiten ejecutables.</p>
+              <ul class="public-attachment-list" id="publicAttachmentList" aria-label="Archivos adjuntos" aria-live="polite"></ul>
+              <p class="public-attachment-message" id="publicAttachmentMessage" role="status"></p>
+            </section>
             <label class="public-field"><span>¿Cómo sabremos que quedó bien? <em>*</em></span><textarea name="acceptance" rows="3" placeholder="Escribe una condición que se pueda comprobar." required></textarea></label>
             <p class="public-form-message" id="publicFormMessage" role="status"></p>
             <div class="public-form-footer"><span>Los campos con * son necesarios.</span><button class="button button-primary" id="publicSubmitButton" type="submit">Enviar solicitud <span aria-hidden="true">→</span></button></div>
           </form>
-          <div class="public-success" id="publicSuccess" role="status"><span class="public-success-mark">✓</span><p class="public-kicker">SOLICITUD RECIBIDA</p><h2>Ya llegó a la mesa.</h2><p id="publicSuccessCopy">Tu número de seguimiento es <strong id="publicSuccessCode">PEN—</strong>. <span id="publicSuccessWorkspace">Tu equipo</span> podrá verla y darle seguimiento.</p><button class="button button-quiet" id="sendAnotherButton" type="button">Enviar otra solicitud</button></div>
+          <div class="public-success" id="publicSuccess" role="status"><span class="public-success-mark">✓</span><p class="public-kicker">SOLICITUD RECIBIDA</p><h2>Ya llegó a la mesa.</h2><p id="publicSuccessCopy">Tu número de seguimiento es <strong id="publicSuccessCode">PEN—</strong>. <span id="publicSuccessWorkspace">Tu equipo</span> podrá verla y darle seguimiento.</p><p class="public-success-attachments is-hidden" id="publicSuccessAttachments"></p><button class="button button-quiet" id="sendAnotherButton" type="button">Enviar otra solicitud</button></div>
         </section>
       </section>
+      <section class="portal-tickets is-hidden" id="portalTicketsSection" aria-labelledby="portalTicketsTitle">
+        <div class="portal-heading"><div><h1 id="portalTicketsTitle">Mis tickets</h1><p id="portalEntityCopy">Consulta el estado de tus solicitudes.</p></div><button class="button button-primary" type="button" data-portal-tab="request">Nueva solicitud</button></div>
+        <div class="portal-ticket-panel">
+          <div class="portal-ticket-tools"><label for="portalStatusFilter">Estado <select id="portalStatusFilter"><option value="all">Todos los estados</option><option value="new">Recibido</option><option value="review">En revisión</option><option value="qa">En validación</option><option value="blocked">Pendiente de información</option><option value="done">Resuelto</option></select></label><button class="button portal-refresh" id="portalRefreshButton" type="button">Actualizar</button></div>
+          <p id="portalTicketsMessage" class="portal-ticket-message" role="status"></p>
+          <div id="portalTicketsList"></div>
+        </div>
+      </section>
+      <div class="portal-invalid is-hidden" id="portalInvalid" role="alert"><h1>Enlace no disponible</h1><p id="portalInvalidMessage"></p></div>
     </main>
     <script src="form-config.js"></script>
+    <script src="work-hours.js"></script>
     <script src="public-form.js"></script>
   </body>
 </html>
