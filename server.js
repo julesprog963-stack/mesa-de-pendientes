@@ -1,13 +1,19 @@
 const crypto = require('node:crypto');
+const fsSync = require('node:fs');
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const express = require('express');
 const multer = require('multer');
 const { MESA_FORM_DEFAULTS, normalizeMesaFormConfig } = require('./form-config');
 
+const ENV_FILE = path.join(__dirname, '.env');
+if (typeof process.loadEnvFile === 'function' && fsSync.existsSync(ENV_FILE)) {
+  try { process.loadEnvFile(ENV_FILE); } catch {}
+}
+
 const app = express();
 const PORT = Number(process.env.PORT || 3000);
-const HOST = process.env.HOST || '127.0.0.1';
+const HOST = process.env.HOST || (process.env.RENDER ? '0.0.0.0' : '127.0.0.1');
 const DATA_DIR = path.join(__dirname, 'data');
 const TICKETS_FILE = path.join(DATA_DIR, 'tickets.json');
 const FORM_CONFIG_FILE = path.join(DATA_DIR, 'form-config.json');
