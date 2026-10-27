@@ -2,6 +2,7 @@ const crypto = require('node:crypto');
 const fsSync = require('node:fs');
 const fs = require('node:fs/promises');
 const path = require('node:path');
+const os = require('node:os');
 const express = require('express');
 const multer = require('multer');
 const { MESA_FORM_DEFAULTS, normalizeMesaFormConfig } = require('./form-config');
@@ -20,12 +21,16 @@ const FORM_CONFIG_FILE = path.join(DATA_DIR, 'form-config.json');
 const ENTITIES_FILE = path.join(DATA_DIR, 'entities.json');
 const ADMIN_KEY_FILE = path.join(DATA_DIR, 'admin-key.json');
 let adminKey = '';
-const UPLOADS_DIR = path.join(DATA_DIR, 'uploads');
-const INCOMING_DIR = path.join(UPLOADS_DIR, '.incoming');
 const SUPABASE_URL = String(process.env.SUPABASE_URL || '').replace(/\/+$/, '');
 const SUPABASE_KEY = String(process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
 const SUPABASE_BUCKET = String(process.env.SUPABASE_BUCKET || 'mesa-uploads').trim();
 const USE_SUPABASE = Boolean(SUPABASE_URL && SUPABASE_KEY);
+// Vercel's deployment directory is read-only; Supabase is the durable store.
+const USE_TEMP_UPLOADS = Boolean(process.env.VERCEL && USE_SUPABASE);
+const UPLOADS_DIR = USE_TEMP_UPLOADS
+  ? path.join(os.tmpdir(), 'mesa-de-pendientes', String(process.pid), 'uploads')
+  : path.join(DATA_DIR, 'uploads');
+const INCOMING_DIR = path.join(UPLOADS_DIR, '.incoming');
 const MAX_ATTACHMENT_COUNT = 8;
 const MAX_ATTACHMENT_SIZE = 10 * 1024 * 1024;
 const TICKET_STATUSES = new Set(['new', 'review', 'qa', 'blocked', 'done']);
@@ -158,18 +163,25 @@ async function storeUploadedFile(file) {
   if (USE_SUPABASE) {
     const buffer = await fs.readFile(destination);
     const url = `${SUPABASE_URL}/storage/v1/object/${encodeURIComponent(SUPABASE_BUCKET)}/${encodeURIComponent(file.filename)}`;
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: supabaseHeaders({
-        'Content-Type': file.mimetype || 'application/octet-stream',
-        'x-upsert': 'true'
-      }),
-      body: buffer
-    });
+    let response;
+    try {
+      response = await fetch(url, {
+        method: 'POST',
+        headers: supabaseHeaders({
+          'Content-Type': file.mimetype || 'application/octet-stream',
+          'x-upsert': 'true'
+        }),
+        body: buffer
+      });
+    } catch (error) {
+      if (USE_TEMP_UPLOADS) await fs.rm(destination, { force: true }).catch(() => {});
+      throw error;
+    }
     if (!response.ok) {
       await fs.rm(destination, { force: true }).catch(() => {});
       throw new Error(`No se pudo guardar el archivo adjunto en Supabase Storage (${response.status}).`);
     }
+    if (USE_TEMP_UPLOADS) await fs.rm(destination, { force: true }).catch(() => {});
   }
   return destination;
 }
@@ -522,6 +534,21 @@ async function downloadAttachment(req, res, next) {
     const filePath = path.join(UPLOADS_DIR, attachment.id);
     const safeName = attachmentName(attachment.name);
     const inlineType = req.query.inline === '1' ? INLINE_ATTACHMENT_TYPES.get(path.extname(safeName).toLowerCase()) : null;
+    if (USE_TEMP_UPLOADS) {
+      const url = `${SUPABASE_URL}/storage/v1/object/${encodeURIComponent(SUPABASE_BUCKET)}/${encodeURIComponent(attachment.id)}`;
+      const remote = await fetch(url, { headers: supabaseHeaders() });
+      if (remote.status === 404) return res.status(404).json({ error: 'No se encontró ese archivo.' });
+      if (!remote.ok) throw new Error(`No se pudo descargar el archivo desde Supabase Storage (${remote.status}).`);
+      const data = Buffer.from(await remote.arrayBuffer());
+      res.set({ 'Cache-Control': 'private, no-store', 'X-Content-Type-Options': 'nosniff' });
+      if (inlineType) {
+        res.set({ 'Content-Type': inlineType, 'Content-Disposition': `inline; filename*=UTF-8''${encodeURIComponent(safeName)}` });
+      } else {
+        res.attachment(safeName);
+        res.type('application/octet-stream');
+      }
+      return res.send(data);
+    }
     if (USE_SUPABASE) {
       try {
         await fs.access(filePath);

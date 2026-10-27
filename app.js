@@ -689,6 +689,7 @@ async function uploadTicketFiles(ticketId, files) {
   const body = await response.json().catch(() => ({}));
   if (!response.ok) {
     if (response.status === 401) showAdminAccess();
+    if (response.status === 413) throw new Error('El envío supera el límite del servidor. Reduce el tamaño total de los archivos a menos de 4 MB e inténtalo de nuevo.');
     throw new Error(body.error || 'No se pudieron subir los archivos.');
   }
   return mapTicket(body);
