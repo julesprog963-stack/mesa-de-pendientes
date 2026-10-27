@@ -1,3 +1,4 @@
+let activePortalTab = 'request';
 const form = document.querySelector('#publicTicketForm');
 const submitButton = document.querySelector('#publicSubmitButton');
 const formMessage = document.querySelector('#publicFormMessage');
@@ -121,6 +122,9 @@ async function loadFormConfig() {
 }
 
 function showPortalTab(tab) {
+  if (tab === 'hours' && portalEntity?.showHours !== true) tab = 'request';
+  activePortalTab = tab;
+  document.querySelector('#portalHoursPanel').classList.toggle('is-hidden', tab !== 'hours');
   document.querySelector('#publicRequestSection').classList.toggle('is-hidden', tab !== 'request');
   document.querySelector('#portalTicketsSection').classList.toggle('is-hidden', tab !== 'tickets');
   document.querySelectorAll('#portalNavigation [data-portal-tab]').forEach((button) => {
@@ -128,7 +132,7 @@ function showPortalTab(tab) {
     button.classList.toggle('is-active', selected);
     button.setAttribute('aria-pressed', String(selected));
   });
-  if (tab === 'tickets') void refreshPortalTickets();
+  if (tab === 'tickets' || tab === 'hours') void refreshPortalTickets();
   else if (successPanel.classList.contains('is-visible')) {
     successPanel.classList.remove('is-visible');
     form.classList.remove('is-hidden');
@@ -188,6 +192,9 @@ function renderPortalHours() {
   const history = document.querySelector('#portalHoursHistory');
   const existingHistory = history.querySelector('.work-history');
   const open = existingHistory ? existingHistory.open : true;
+  document.querySelector('#portalHoursTab').classList.toggle('is-hidden', !visible);
+  if (!visible && activePortalTab === 'hours') showPortalTab('request');
+  document.querySelector('#portalHoursPanel').classList.toggle('is-hidden', !visible || activePortalTab !== 'hours');
   section.classList.toggle('is-hidden', !visible);
   historySection.classList.toggle('is-hidden', !visible);
   summary.innerHTML = visible ? window.MesaHours.render(portalEntity, false, false) : '';

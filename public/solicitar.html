@@ -20,9 +20,12 @@
       <nav class="portal-navigation is-hidden" id="portalNavigation" aria-label="Portal de la entidad">
         <button class="portal-tab is-active" type="button" data-portal-tab="request" aria-pressed="true">Nueva solicitud</button>
         <button class="portal-tab" type="button" data-portal-tab="tickets" aria-pressed="false">Mis tickets <span id="portalTicketCount">0</span></button>
+        <button class="portal-tab is-hidden" id="portalHoursTab" type="button" data-portal-tab="hours" aria-pressed="false" aria-controls="portalHoursPanel">Horas registradas</button>
       </nav>
+      <div id="portalHoursPanel" class="is-hidden">
       <section class="portal-hours is-hidden" id="portalHoursSection" aria-labelledby="portalHoursTitle"><h2 id="portalHoursTitle">Horas trabajadas</h2><div id="portalHoursSummary"></div></section>
       <section class="portal-hours is-hidden" id="portalHoursHistorySection" aria-labelledby="portalHoursHistoryTitle"><h2 id="portalHoursHistoryTitle">Horas registradas</h2><div id="portalHoursHistory"></div></section>
+      </div>
       <section class="public-layout" id="publicRequestSection">
         <div class="public-intro">
           <p class="public-kicker">ENVIAR SOLICITUD</p>

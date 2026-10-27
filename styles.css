@@ -574,7 +574,7 @@ h1 { margin-bottom: 12px; color: var(--paper); font-size: clamp(32px, 3.8vw, 52p
 .admin-access-gate .auth-copy { font-size: 14px; }
 .admin-access-gate .button { min-height: 44px; font-size: 14px; }
 .admin-access-error { color: #ff9e95; font-size: 14px; line-height: 1.5; }
-.portal-navigation { display: flex; gap: 8px; max-width: 1260px; margin: 24px auto 0; padding-bottom: 16px; border-bottom: 1px solid var(--line); }
+.portal-navigation { display: flex; flex-wrap: wrap; gap: 8px; max-width: 1260px; margin: 24px auto 0; padding-bottom: 16px; border-bottom: 1px solid var(--line); }
 .portal-tab { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 10px 16px; border: 1px solid var(--line); border-radius: 4px; background: transparent; color: var(--muted); font-size: 14px; }
 .portal-tab.is-active, .portal-tab:hover { background: var(--paper); color: var(--ink); border-color: var(--paper); }
 .portal-tab > span { font-variant-numeric: tabular-nums; }
