@@ -206,6 +206,7 @@ function renderEntities() {
       <div class="entity-row-heading"><div><h2>${escapeHtml(entity.name)}</h2><p>${own.length} ticket${own.length === 1 ? '' : 's'} · ${open} abierto${open === 1 ? '' : 's'}</p></div><button class="button" type="button" data-entity-config="${escapeHtml(entity.id)}">Configurar formulario</button><button class="button entity-view-button" type="button" data-entity-view="${escapeHtml(entity.id)}">Ver tickets</button></div>
       <section class="entity-work" aria-label="Horas de ${escapeHtml(entity.name)}">
         <div class="entity-work-heading"><h3>Horas trabajadas</h3><button class="button ${running ? 'work-stop-button' : 'button-primary'}" type="button" data-entity-timer="${escapeHtml(entity.id)}" aria-label="${running ? 'Terminar' : 'Iniciar'} contador de ${escapeHtml(entity.name)}" ${busy ? 'disabled' : ''}>${running ? 'Terminar' : 'Iniciar'}</button></div>
+        <button class="button" type="button" data-entity-hours-reset="${escapeHtml(entity.id)}" ${busy || running || !entity.hours?.sessions?.length ? 'disabled' : ''} title="Borra todos los registros de horas de esta entidad. Detén primero el contador.">Restablecer horas</button>
         <label class="work-visibility"><input type="checkbox" data-entity-hours-toggle="${escapeHtml(entity.id)}" ${entity.showHours ? 'checked' : ''} ${busy ? 'disabled' : ''} /><span>Mostrar horas en el portal de esta entidad</span></label>
         <p class="work-visibility-hint">Ocultar el resumen no detiene el contador ni borra sus registros.</p>
         ${window.MesaHours.render(entity, openHistories.has(entity.id))}
@@ -230,7 +231,7 @@ async function mutateEntityHours(id, action, visible) {
   const entity = entities.find((item) => item.id === id);
   if (!entity) return;
   const visibility = action === 'visibility';
-  const control = visibility ? 'data-entity-hours-toggle' : 'data-entity-timer';
+  const control = visibility ? 'data-entity-hours-toggle' : action === 'reset' ? 'data-entity-hours-reset' : 'data-entity-timer';
   entityHourRequests.add(id);
   const row = document.querySelector(`[data-entity-row="${id}"]`);
   row?.querySelectorAll('button, input[type="checkbox"]').forEach((node) => { node.disabled = true; });
@@ -238,10 +239,10 @@ async function mutateEntityHours(id, action, visible) {
     const url = `/api/entities/${encodeURIComponent(id)}${visibility ? '' : `/time/${action}`}`;
     const updated = await apiRequest(url, {
       method: visibility ? 'PATCH' : 'POST',
-      body: JSON.stringify(visibility ? { showHours: visible } : { sessionId: entity.hours?.activeSessionId })
+      body: JSON.stringify(visibility ? { showHours: visible } : { sessionId: entity.hours?.activeSessionId, lastSessionId: entity.hours?.sessions?.at(-1)?.id || null })
     });
     entities = entities.map((item) => item.id === id ? window.MesaHours.track(updated) : item);
-    showToast(visibility ? (visible ? 'Las horas ya son visibles en su portal.' : 'Las horas se ocultaron de su portal.') : action === 'start' ? `Contador iniciado: ${entity.name}.` : `Registro terminado: ${entity.name}.`);
+    showToast(visibility ? (visible ? 'Las horas ya son visibles en su portal.' : 'Las horas se ocultaron de su portal.') : action === 'reset' ? `Horas restablecidas: ${entity.name}.` : action === 'start' ? `Contador iniciado: ${entity.name}.` : `Registro terminado: ${entity.name}.`);
   } catch (error) {
     showToast(error.message);
     try { entities = (await apiRequest('/api/entities')).map(window.MesaHours.track); } catch { /* Keep the last known state while offline. */ }
@@ -1563,6 +1564,14 @@ $('#entityForm').addEventListener('submit', async (event) => {
   finally { button.disabled = false; }
 });
 $('#entityList').addEventListener('click', async (event) => {
+  const reset = event.target.closest('[data-entity-hours-reset]');
+  if (reset) {
+    const entity = entities.find((item) => item.id === reset.dataset.entityHoursReset);
+    if (entity && window.confirm(`¿Restablecer las horas de ${entity.name}? Se borrará todo su historial de horas y el total quedará en cero. Esta acción no se puede deshacer.`)) {
+      void mutateEntityHours(entity.id, 'reset');
+    }
+    return;
+  }
   const timer = event.target.closest('[data-entity-timer]');
   if (timer) {
     const entity = entities.find((item) => item.id === timer.dataset.entityTimer);
