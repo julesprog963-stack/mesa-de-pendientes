@@ -55,6 +55,12 @@ Por defecto la mesa guarda todo en `data/`. Si deseas desplegarla en un servicio
 1. Crea un proyecto gratuito en Supabase y ejecuta el contenido de `supabase/schema.sql` en el **SQL Editor**.
 2. Define las variables de entorno `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY` (y opcionalmente `SUPABASE_BUCKET=mesa-uploads`). Puedes guiarte con `.env.example`.
 
+## Consultas del portal en Supabase
+
+El portal revalida el estado cada minuto mientras se consultan **Mis tickets** o **Horas registradas**. No consulta desde **Nueva solicitud** ni mientras la pestaña está oculta. Cada revalidación valida el token con las entidades actuales y comprueba las revisiones de tickets y configuración. Si la respuesta no cambió y hay metadatos de revisión, el servidor responde `304` sin leer el JSON completo de tickets. El botón **Actualizar** fuerza una lectura completa; el navegador también la fuerza cada 10 minutos para recoger cambios manuales que no actualicen `updated_at`.
+
+El arranque solo intenta migrar archivos JSON locales que existan. Al definir `ADMIN_KEY`, evita consultar la clave de administración en Supabase. La mesa sigue guardando tickets y entidades como snapshots JSON completos: las escrituras leen y reemplazan esos snapshots, y el esquema actual no añade paginación ni coordinación entre varias instancias. Ejecuta `npm test` para comprobar el comportamiento con datos de prueba y un Supabase simulado.
+
 ## API principal
 
 - Pública: `POST /api/public/tickets`, `GET /api/form-config`, `GET /api/portal/:token`, `POST /api/portal/:token/tickets` y descargas/vista previa de adjuntos limitadas al portal.

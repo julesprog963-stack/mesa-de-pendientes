@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "vercel-build": "node scripts/prepare-vercel.cjs"
+    "vercel-build": "node scripts/prepare-vercel.cjs",
+    "test": "node --test tests/*.test.js"
   },
   "engines": {
     "node": ">=20"
