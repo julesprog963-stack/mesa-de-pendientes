@@ -111,6 +111,21 @@ async function readJson(file, fallback) {
   return fallback;
 }
 
+// Revalidate the portal without downloading the full tickets JSON on every poll.
+// Tokens are still checked against fresh entity data by findPortalEntity first.
+async function portalRevision(entity) {
+  if (!USE_SUPABASE) return null;
+  const keys = entity.formConfig ? 'tickets' : 'tickets,form-config';
+  const url = `${SUPABASE_URL}/rest/v1/mesa_kv?key=in.(${keys})&select=key,updated_at&order=key.asc`;
+  const response = await fetch(url, { headers: supabaseHeaders({ Accept: 'application/json' }) });
+  if (!response.ok) throw new Error(`No se pudo comprobar el portal (${response.status}).`);
+  const revisions = await response.json();
+  // Missing revision metadata must never hide changes behind a reusable tag.
+  if (!Array.isArray(revisions) || revisions.length !== keys.split(',').length || revisions.some((row) => !row.updated_at)) return null;
+  // Hours keep ticking locally, so this is a semantic (weak) validator.
+  return `W/"${crypto.createHash('sha256').update(JSON.stringify([entity, revisions])).digest('hex')}"`;
+}
+
 function queueWrite(operation) {
   const next = writeQueue.then(operation);
   writeQueue = next.catch(() => {});
@@ -477,6 +492,11 @@ async function receivePublicTicket(req, res, next) {
 app.post('/api/public/tickets', uploadAttachments.array('attachments', MAX_ATTACHMENT_COUNT), receivePublicTicket);
 app.get('/api/portal/:token', findPortalEntity, async (req, res, next) => {
   try {
+    const revision = await portalRevision(req.portalEntity);
+    if (revision) {
+      res.set('ETag', revision);
+      if (req.get('If-None-Match') === revision) return res.status(304).end();
+    }
     const tickets = (await getTickets()).filter((ticket) => ticket.entityId === req.portalEntity.id).map((ticket) => ({
       id: ticket.id, title: ticket.title, description: ticket.description, acceptance: ticket.acceptance,
       status: ticket.status, priority: ticket.priority, createdAt: ticket.createdAt, updatedAt: ticket.updatedAt,
@@ -684,8 +704,11 @@ app.use((error, _req, res, _next) => {
 
 async function syncLocalSeedToSupabase() {
   if (!USE_SUPABASE) return;
-  await readJson(ENTITIES_FILE, []);
-  await readJson(FORM_CONFIG_FILE, MESA_FORM_DEFAULTS);
+  // Remote-only deployments have no local seed to migrate. Avoid reading the
+  // entire database just to discover that there are no bundled uploads.
+  if (fsSync.existsSync(ENTITIES_FILE)) await readJson(ENTITIES_FILE, []);
+  if (fsSync.existsSync(FORM_CONFIG_FILE)) await readJson(FORM_CONFIG_FILE, MESA_FORM_DEFAULTS);
+  if (!fsSync.existsSync(TICKETS_FILE)) return;
   const tickets = await readJson(TICKETS_FILE, []);
   if (!Array.isArray(tickets)) return;
   for (const ticket of tickets) {
@@ -709,7 +732,7 @@ async function syncLocalSeedToSupabase() {
 }
 
 async function startServer() {
-  const stored = await readJson(ADMIN_KEY_FILE, null);
+  const stored = process.env.ADMIN_KEY ? null : await readJson(ADMIN_KEY_FILE, null);
   adminKey = process.env.ADMIN_KEY || stored?.key || crypto.randomBytes(24).toString('hex');
   if (!process.env.ADMIN_KEY && !stored?.key) await writeJson(ADMIN_KEY_FILE, { key: adminKey });
   await syncLocalSeedToSupabase();

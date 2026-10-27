@@ -1,4 +1,8 @@
 let activePortalTab = 'request';
+let portalRevision = '';
+let portalLastFullRefresh = 0;
+const PORTAL_FULL_REFRESH_MS = 10 * 60000;
+const PORTAL_REFRESH_MS = 60000;
 const form = document.querySelector('#publicTicketForm');
 const submitButton = document.querySelector('#publicSubmitButton');
 const formMessage = document.querySelector('#publicFormMessage');
@@ -92,13 +96,17 @@ async function loadFormConfig() {
     }
     if (result.ok) {
       const data = await result.json();
+      if (entityToken) {
+        portalRevision = result.headers.get('ETag') || '';
+        portalLastFullRefresh = Date.now();
+      }
       if (data.config && window.normalizeMesaFormConfig) formConfig = window.normalizeMesaFormConfig(data.config);
       if (entityToken) {
         portalEntity = window.MesaHours.track(data.entity);
         portalTickets = data.tickets || [];
         document.querySelector('#portalNavigation').classList.remove('is-hidden');
         document.querySelector('.public-header .brand').href = window.location.href;
-        document.querySelector('#portalEntityCopy').textContent = `Solicitudes de ${portalEntity.name}. El estado se actualiza automáticamente cada 30 segundos.`;
+        document.querySelector('#portalEntityCopy').textContent = `Solicitudes de ${portalEntity.name}. El estado se actualiza cada minuto mientras consultas tus tickets o tus horas.`;
         const viewTickets = document.createElement('button');
         viewTickets.type = 'button';
         viewTickets.className = 'button button-primary portal-success-link';
@@ -201,15 +209,25 @@ function renderPortalHours() {
   history.innerHTML = visible ? (window.MesaHours.renderHistory(portalEntity, open) || '<p class="work-period">Todavía no hay horas registradas.</p>') : '';
 }
 
-async function refreshPortalTickets() {
+async function refreshPortalTickets({ force = false } = {}) {
   if (!portalEntity || portalLoading) return;
   portalLoading = true;
   const button = document.querySelector('#portalRefreshButton');
   button.disabled = true;
   try {
-    const response = await fetch(`/api/portal/${encodeURIComponent(entityToken)}`, { cache: 'no-store' });
+    const response = await fetch(`/api/portal/${encodeURIComponent(entityToken)}`, {
+      cache: 'no-store',
+      headers: !force && portalRevision && Date.now() - portalLastFullRefresh < PORTAL_FULL_REFRESH_MS
+        ? { 'If-None-Match': portalRevision } : {}
+    });
+    if (response.status === 304) {
+      document.querySelector('#portalTicketsMessage').textContent = '';
+      return;
+    }
     const result = await response.json();
     if (!response.ok) throw new Error(result.error || 'No se pudieron actualizar tus tickets.');
+    portalRevision = response.headers.get('ETag') || '';
+    portalLastFullRefresh = Date.now();
     portalEntity = window.MesaHours.track(result.entity);
     portalTickets = result.tickets || [];
     renderPortalTickets();
@@ -221,8 +239,13 @@ async function refreshPortalTickets() {
 
 document.querySelectorAll('[data-portal-tab]').forEach((button) => button.addEventListener('click', () => showPortalTab(button.dataset.portalTab)));
 document.querySelector('#portalStatusFilter').addEventListener('change', renderPortalTickets);
-document.querySelector('#portalRefreshButton').addEventListener('click', () => void refreshPortalTickets());
-setInterval(() => { if (!document.hidden && portalEntity) void refreshPortalTickets(); }, 30000);
+document.querySelector('#portalRefreshButton').addEventListener('click', () => void refreshPortalTickets({ force: true }));
+function refreshVisiblePortal() {
+  if (!document.hidden && (activePortalTab === 'tickets' || activePortalTab === 'hours')) void refreshPortalTickets();
+}
+setInterval(refreshVisiblePortal, PORTAL_REFRESH_MS);
+document.addEventListener('visibilitychange', refreshVisiblePortal);
+window.addEventListener('online', refreshVisiblePortal);
 setInterval(() => { if (portalEntity?.hours) window.MesaHours.tick([portalEntity]); }, 1000);
 
 function showMessage(message, type = 'error') {
