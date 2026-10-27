@@ -19,7 +19,7 @@
     return dateFormat.format(new Date(value));
   }
 
-  function render(entity, historyOpen = false) {
+  function render(entity, historyOpen = false, includeHistory = true) {
     const hours = entity.hours;
     if (!hours) return '';
     const sessions = hours.sessions || [];
@@ -30,8 +30,14 @@
       <div class="work-counters"><div><span>Total trabajado</span><strong data-work-total="${escape(entity.id)}" role="timer" aria-live="off">${duration(hours.totalMs + extra)}</strong></div>${latest ? `<div><span>${active ? 'Sesión en curso' : 'Última sesión'}</span><strong class="work-session-duration" data-work-session="${escape(entity.id)}" role="timer" aria-live="off">${duration(latest.durationMs + (active ? extra : 0))}</strong></div>` : ''}</div>
       <p class="work-session-state ${active ? 'is-running' : ''}">${active ? 'Contador en curso' : 'Sin contador en curso'}</p>
       ${latest ? `<p class="work-period"><strong>Inicio:</strong> <time datetime="${escape(latest.startedAt)}">${escape(moment(latest.startedAt))}</time>${latest.endedAt ? `<br><strong>Fin:</strong> <time datetime="${escape(latest.endedAt)}">${escape(moment(latest.endedAt))}</time>` : ''}</p>` : '<p class="work-period">Todavía no hay horas registradas.</p>'}
-      ${sessions.length ? `<details class="work-history" data-work-history="${escape(entity.id)}" ${historyOpen ? 'open' : ''}><summary>Registro de horas (${sessions.length})</summary><ol>${[...sessions].reverse().map((session) => `<li class="work-entry"><div><span>Inicio</span><time datetime="${escape(session.startedAt)}">${escape(moment(session.startedAt))}</time></div><div><span>Fin</span>${session.endedAt ? `<time datetime="${escape(session.endedAt)}">${escape(moment(session.endedAt))}</time>` : '<strong class="work-entry-running">En curso</strong>'}</div><div><span>Duración</span><strong data-work-entry="${escape(session.id)}">${duration(session.durationMs + (!session.endedAt ? extra : 0))}</strong></div></li>`).join('')}</ol></details>` : ''}
+      ${includeHistory ? renderHistory(entity, historyOpen) : ''}
     </div>`;
+  }
+
+  function renderHistory(entity, historyOpen = false) {
+    const sessions = entity.hours?.sessions || [];
+    const extra = elapsed(entity);
+    return sessions.length ? `<details class="work-history" data-work-history="${escape(entity.id)}" ${historyOpen ? 'open' : ''}><summary>Registro de horas (${sessions.length})</summary><ol>${[...sessions].reverse().map((session) => `<li class="work-entry"><div><span>Inicio</span><time datetime="${escape(session.startedAt)}">${escape(moment(session.startedAt))}</time></div><div><span>Fin</span>${session.endedAt ? `<time datetime="${escape(session.endedAt)}">${escape(moment(session.endedAt))}</time>` : '<strong class="work-entry-running">En curso</strong>'}</div><div><span>Duración</span><strong data-work-entry="${escape(session.id)}">${duration(session.durationMs + (!session.endedAt ? extra : 0))}</strong></div></li>`).join('')}</ol></details>` : '';
   }
 
   function tick(entities) {
@@ -54,5 +60,5 @@
     });
   }
 
-  window.MesaHours = { track, render, tick, duration };
+  window.MesaHours = { track, render, renderHistory, tick, duration };
 })();

@@ -369,7 +369,7 @@ app.patch('/api/entities/:id', requireAdmin, async (req, res, next) => {
 
 app.post('/api/entities/:id/time/:action', requireAdmin, async (req, res, next) => {
   try {
-    if (!['start', 'stop'].includes(req.params.action)) return res.status(404).json({ error: 'Acción no disponible.' });
+    if (!['start', 'stop', 'reset'].includes(req.params.action)) return res.status(404).json({ error: 'Acción no disponible.' });
     const entity = await queueWrite(async () => {
       const entities = await getEntities();
       const current = entities.find((item) => item.id === req.params.id);
@@ -377,7 +377,12 @@ app.post('/api/entities/:id/time/:action', requireAdmin, async (req, res, next) 
       current.timeEntries ||= [];
       const active = current.timeEntries.find((entry) => !entry.endedAt);
       const conflict = (message) => { const error = new Error(message); error.status = 409; throw error; };
-      if (req.params.action === 'start') {
+      if (req.params.action === 'reset') {
+        if (active) conflict('Termina el contador antes de restablecer las horas.');
+        const latest = current.timeEntries.at(-1)?.id || null;
+        if (req.body?.lastSessionId !== latest) conflict('El registro de horas cambió. Revísalo antes de restablecerlo.');
+        current.timeEntries = [];
+      } else if (req.params.action === 'start') {
         if (active) conflict('Esta entidad ya tiene un contador iniciado. Se actualizó su estado.');
         current.timeEntries.push({ id: crypto.randomUUID(), startedAt: new Date().toISOString(), endedAt: null });
       } else {

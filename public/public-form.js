@@ -184,9 +184,14 @@ function renderPortalHours() {
   const section = document.querySelector('#portalHoursSection');
   const summary = document.querySelector('#portalHoursSummary');
   const visible = portalEntity?.showHours === true && Boolean(portalEntity.hours);
-  const open = Boolean(summary.querySelector('.work-history[open]'));
+  const historySection = document.querySelector('#portalHoursHistorySection');
+  const history = document.querySelector('#portalHoursHistory');
+  const existingHistory = history.querySelector('.work-history');
+  const open = existingHistory ? existingHistory.open : true;
   section.classList.toggle('is-hidden', !visible);
-  summary.innerHTML = visible ? window.MesaHours.render(portalEntity, open) : '';
+  historySection.classList.toggle('is-hidden', !visible);
+  summary.innerHTML = visible ? window.MesaHours.render(portalEntity, false, false) : '';
+  history.innerHTML = visible ? (window.MesaHours.renderHistory(portalEntity, open) || '<p class="work-period">Todavía no hay horas registradas.</p>') : '';
 }
 
 async function refreshPortalTickets() {
