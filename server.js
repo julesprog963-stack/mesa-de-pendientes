@@ -665,7 +665,7 @@ app.get('/', (req, res) => {
   }
   res.sendFile(path.join(__dirname, 'index.html'));
 });
-for (const asset of ['index.html', 'solicitar.html', 'styles.css', 'app.js', 'public-form.js', 'form-config.js', 'work-hours.js']) {
+for (const asset of ['index.html', 'solicitar.html', 'styles.css', 'app.js', 'public-form.js', 'form-config.js', 'work-hours.js', 'favicon.ico', 'favicon-32.png', 'favicon-192.png', 'apple-touch-icon.png']) {
   app.get(`/${asset}`, (_req, res) => res.sendFile(path.join(__dirname, asset)));
 }
 app.use((error, _req, res, _next) => {
