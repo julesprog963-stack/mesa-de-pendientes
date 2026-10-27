@@ -349,6 +349,7 @@ form?.addEventListener('submit', async (event) => {
       method: 'POST', body: requestData
     });
     const result = await response.json().catch(() => ({}));
+    if (response.status === 413) throw new Error('El envío supera el límite del servidor. Reduce el tamaño total de los archivos a menos de 4 MB e inténtalo de nuevo.');
     if (!response.ok) throw new Error(result.error || 'No se pudo enviar la solicitud.');
     form.reset();
     selectedAttachments = [];
