@@ -5,7 +5,8 @@
   "description": "Mesa local de pendientes y solicitudes con Node.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "node --watch server.js"
+    "dev": "node --watch server.js",
+    "vercel-build": "node scripts/prepare-vercel.cjs"
   },
   "engines": {
     "node": ">=20"
