@@ -27,6 +27,7 @@ let tickets = [];
 let entities = [];
 let activeEntity = 'all';
 const entityHourRequests = new Set();
+let workEdit = null;
 let formConfig = loadFormConfig();
 let selectedId = tickets[0]?.id || null;
 let activeFilter = 'all';
@@ -209,7 +210,7 @@ function renderEntities() {
         <button class="button" type="button" data-entity-hours-reset="${escapeHtml(entity.id)}" ${busy || running || !entity.hours?.sessions?.length ? 'disabled' : ''} title="Borra todos los registros de horas de esta entidad. Detén primero el contador.">Restablecer horas</button>
         <label class="work-visibility"><input type="checkbox" data-entity-hours-toggle="${escapeHtml(entity.id)}" ${entity.showHours ? 'checked' : ''} ${busy ? 'disabled' : ''} /><span>Mostrar horas en el portal de esta entidad</span></label>
         <p class="work-visibility-hint">Ocultar el resumen no detiene el contador ni borra sus registros.</p>
-        ${window.MesaHours.render(entity, openHistories.has(entity.id))}
+        ${window.MesaHours.render(entity, openHistories.has(entity.id), true, true)}
       </section>
       <label class="entity-share-label">Enlace privado<input readonly value="${escapeHtml(url)}" aria-label="Enlace de ${escapeHtml(entity.name)}" /></label>
       <div class="entity-share-actions"><button class="button entity-copy-button" type="button" data-entity-copy="${escapeHtml(entity.id)}">Copiar enlace</button><a href="${escapeHtml(url)}" target="_blank" rel="noreferrer">Abrir portal <span aria-hidden="true">↗</span></a></div>
@@ -252,6 +253,75 @@ async function mutateEntityHours(id, action, visible) {
     document.querySelector(`[${control}="${id}"]`)?.focus();
   }
 }
+
+function localDateTime(value) {
+  const date = new Date(value);
+  const pad = (part) => String(part).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+}
+
+function openWorkEdit(entityId, sessionId) {
+  const entity = entities.find((item) => item.id === entityId);
+  const session = entity?.hours?.sessions?.find((item) => item.id === sessionId);
+  if (!session?.endedAt || entityHourRequests.has(entityId)) return;
+  workEdit = { entityId, sessionId, startedAt: session.startedAt, endedAt: session.endedAt };
+  $('#workEditEntity').textContent = entity.name;
+  $('#workEditStart').value = localDateTime(session.startedAt);
+  $('#workEditEnd').value = localDateTime(session.endedAt);
+  $('#workEditError').textContent = '';
+  $('#workEditDialog').showModal();
+  $('#workEditStart').focus();
+}
+
+$('#workEditCancel').addEventListener('click', () => $('#workEditDialog').close());
+$('#workEditDialog').addEventListener('cancel', (event) => { if (workEdit && entityHourRequests.has(workEdit.entityId)) event.preventDefault(); });
+$('#workEditDialog').addEventListener('close', () => { workEdit = null; });
+$('#workEditForm').addEventListener('submit', async (event) => {
+  event.preventDefault();
+  if (!workEdit) return;
+  const edit = workEdit;
+  const startInput = $('#workEditStart').value;
+  const endInput = $('#workEditEnd').value;
+  const start = new Date(startInput);
+  const end = new Date(endInput);
+  const errorNode = $('#workEditError');
+  if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime()) || end <= start) { errorNode.textContent = 'El fin debe ser posterior al inicio.'; return; }
+  if (end.getTime() > Date.now()) { errorNode.textContent = 'El fin no puede estar en el futuro.'; return; }
+  const submit = event.currentTarget.querySelector('[type="submit"]');
+  const cancel = $('#workEditCancel');
+  let saved = false;
+  entityHourRequests.add(edit.entityId);
+  submit.disabled = true;
+  cancel.disabled = true;
+  errorNode.textContent = '';
+  try {
+    const updated = await apiRequest(`/api/entities/${encodeURIComponent(edit.entityId)}/time/entries/${encodeURIComponent(edit.sessionId)}`, {
+      method: 'PATCH',
+      body: JSON.stringify({
+        startedAt: localDateTime(start) === localDateTime(edit.startedAt) ? edit.startedAt : start.toISOString(),
+        endedAt: localDateTime(end) === localDateTime(edit.endedAt) ? edit.endedAt : end.toISOString(),
+        originalStartedAt: edit.startedAt, originalEndedAt: edit.endedAt
+      })
+    });
+    entities = entities.map((entity) => entity.id === edit.entityId ? window.MesaHours.track(updated) : entity);
+    $('#workEditDialog').close();
+    saved = true;
+    showToast('Las horas de la sesión se actualizaron.');
+  } catch (error) {
+    errorNode.textContent = error.message;
+    if (error.status === 409 || error.status === 404) {
+      try { entities = (await apiRequest('/api/entities')).map(window.MesaHours.track); } catch { /* Preserve the form while offline. */ }
+    }
+  } finally {
+    entityHourRequests.delete(edit.entityId);
+    submit.disabled = false;
+    cancel.disabled = false;
+    renderEntities();
+    if (saved) {
+      document.querySelector(`[data-work-edit="${CSS.escape(edit.sessionId)}"][data-work-entity="${CSS.escape(edit.entityId)}"]`)?.focus();
+    }
+  }
+});
 
 function changeEntityScope(value) {
   activeEntity = value;
@@ -1565,6 +1635,8 @@ $('#entityForm').addEventListener('submit', async (event) => {
   finally { button.disabled = false; }
 });
 $('#entityList').addEventListener('click', async (event) => {
+  const edit = event.target.closest('[data-work-edit]');
+  if (edit) { openWorkEdit(edit.dataset.workEntity, edit.dataset.workEdit); return; }
   const reset = event.target.closest('[data-entity-hours-reset]');
   if (reset) {
     const entity = entities.find((item) => item.id === reset.dataset.entityHoursReset);

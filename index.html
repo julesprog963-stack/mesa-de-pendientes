@@ -492,6 +492,17 @@
       </section>
     </div>
 
+    <dialog id="workEditDialog" class="profile-dialog work-edit-dialog" aria-labelledby="workEditTitle">
+      <div class="dialog-header"><div><h2 id="workEditTitle">Editar horas</h2><p class="dialog-copy" id="workEditEntity"></p></div></div>
+      <form id="workEditForm">
+        <p>Corrige las fechas y horas de esta sesión. Se usa la zona horaria de este dispositivo.</p>
+        <label class="field"><span>Inicio</span><input id="workEditStart" type="datetime-local" step="1" required /></label>
+        <label class="field"><span>Fin</span><input id="workEditEnd" type="datetime-local" step="1" required /></label>
+        <p class="form-error" id="workEditError" role="alert"></p>
+        <div class="dialog-footer"><button class="button button-quiet" id="workEditCancel" type="button">Cancelar</button><button class="button button-primary" type="submit">Guardar horas</button></div>
+      </form>
+    </dialog>
+
     <script src="form-config.js"></script>
     <script src="work-hours.js"></script>
     <script src="app.js"></script>

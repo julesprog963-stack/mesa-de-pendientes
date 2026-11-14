@@ -394,6 +394,33 @@ app.patch('/api/entities/:id', requireAdmin, async (req, res, next) => {
   } catch (error) { next(error); }
 });
 
+app.patch('/api/entities/:id/time/entries/:sessionId', requireAdmin, async (req, res, next) => {
+  try {
+    const { startedAt, endedAt, originalStartedAt, originalEndedAt } = req.body || {};
+    const isoTime = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
+    const validTime = (value) => typeof value === 'string' && isoTime.test(value) && Number.isFinite(Date.parse(value)) && new Date(value).toISOString() === value;
+    if (!validTime(startedAt) || !validTime(endedAt)) return res.status(400).json({ error: 'Indica una fecha y hora válidas para el inicio y el fin.' });
+    if (Date.parse(endedAt) <= Date.parse(startedAt)) return res.status(400).json({ error: 'El fin debe ser posterior al inicio.' });
+    if (Date.parse(endedAt) > Date.now()) return res.status(400).json({ error: 'El fin no puede estar en el futuro.' });
+    const entity = await queueWrite(async () => {
+      const entities = await getEntities();
+      const current = entities.find((item) => item.id === req.params.id);
+      if (!current) return null;
+      const entry = (current.timeEntries || []).find((item) => item.id === req.params.sessionId);
+      if (!entry) { const error = new Error('No se encontró esa sesión. Actualiza el registro e inténtalo de nuevo.'); error.status = 404; throw error; }
+      if (!entry.endedAt || entry.startedAt !== originalStartedAt || entry.endedAt !== originalEndedAt) {
+        const error = new Error('La sesión cambió o sigue en curso. Actualiza el registro antes de editarla.'); error.status = 409; throw error;
+      }
+      entry.startedAt = startedAt;
+      entry.endedAt = endedAt;
+      await writeJson(ENTITIES_FILE, entities);
+      return current;
+    });
+    if (!entity) return res.status(404).json({ error: 'No se encontró esa entidad.' });
+    res.json(adminEntity(entity));
+  } catch (error) { next(error); }
+});
+
 app.post('/api/entities/:id/time/:action', requireAdmin, async (req, res, next) => {
   try {
     if (!['start', 'stop', 'reset'].includes(req.params.action)) return res.status(404).json({ error: 'Acción no disponible.' });
