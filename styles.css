@@ -549,6 +549,13 @@ h1 { margin-bottom: 12px; color: var(--paper); font-size: clamp(32px, 3.8vw, 52p
 .work-history summary:focus-visible { outline: 2px solid var(--orange-ink); outline-offset: 3px; }
 .work-history ol { padding: 0; margin: 0; list-style: none; }
 .work-entry { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1.4fr) auto; gap: 20px; padding: 16px 0; border-top: 1px solid var(--line-dark); font-size: 14px; line-height: 1.6; }
+.work-entry:has(.work-edit-button) { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1.4fr) auto auto; }
+.work-edit-button { align-self: center; }
+.work-edit-dialog { margin: auto; }
+.work-edit-dialog::backdrop { background: rgba(0, 0, 0, .6); }
+.work-edit-dialog .field { margin: 18px 0; }
+.work-edit-dialog .field > span { font-size: 14px; }
+.work-edit-dialog .field input { min-height: 44px; font-size: 16px; }
 .work-entry > div { display: grid; align-content: start; gap: 6px; min-width: 0; }
 .work-entry div > span { color: var(--muted-dark); font-size: 12px; }
 .work-entry time { color: var(--ink); overflow-wrap: anywhere; }
@@ -617,7 +624,7 @@ h1 { margin-bottom: 12px; color: var(--paper); font-size: clamp(32px, 3.8vw, 52p
 .entities-panel :is(button, a, input):focus-visible, .portal-ticket-panel :is(button, a, select, summary):focus-visible { outline: 2px solid var(--orange-ink); outline-offset: 3px; }
 @media (max-width: 620px) {
   .portal-hours { padding: 22px 17px; }
-  .work-entry { grid-template-columns: 1fr; gap: 14px; }
+  .work-entry, .work-entry:has(.work-edit-button) { grid-template-columns: 1fr; gap: 14px; }
   .work-counters { gap: 20px 24px; }
   .work-counters strong { font-size: 25px; }
   .workspace-entity-filter { justify-content: flex-start; }

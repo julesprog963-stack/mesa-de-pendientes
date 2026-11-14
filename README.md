@@ -32,6 +32,8 @@ Desde la mesa puedes ver tickets de todas las entidades, filtrar por una entidad
 
 En cada entidad, **Configurar formulario** permite definir áreas, detalles, tipos, prioridades y apariencia propios. El botón general **Configurar formulario de entidad** permite cambiar de entidad, guardar y continuar con la siguiente; si una entidad no tiene opciones propias, hereda la configuración general. También puedes iniciar y terminar el contador de horas de cada entidad de forma independiente. El control **Mostrar horas en el portal** decide si su resumen de horas aparece para esa entidad; ocultarlo no detiene el contador.
 
+Para corregir una sesión terminada, abre **Registro de horas**, selecciona **Editar** y ajusta el inicio o el fin. Las fechas se muestran en la zona horaria del dispositivo y el total se recalcula al guardar. Para editar una sesión que está en curso, termínala primero.
+
 ## Archivos adjuntos y respaldos
 
 Cada solicitud admite hasta 8 archivos, con un máximo de 10 MB por archivo. El servidor rechaza archivos ejecutables. Los adjuntos se descargan desde la ficha del ticket o el portal de su entidad y se guardan en `data/uploads/`.
